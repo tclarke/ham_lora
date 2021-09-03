@@ -1,7 +1,7 @@
 {
     "callsign": "K8TRC",
     "grid": "EM79vs",
-    "mode": "beacon",
+    "mode": "sequence",
     "power": 20,
     "frequency": 917.0,
     "log": true,

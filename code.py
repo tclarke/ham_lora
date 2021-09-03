@@ -8,7 +8,22 @@ from adafruit_display_text import label
 from adafruit_display_shapes import circle
 import adafruit_imageload
 import time
+import re
 from radio import Radio
+
+
+RE_BCN = 'BCN'
+RE_CALL = '[A-Z0-9]+\d[A-Z0-9]*[A-Z]'
+RE_GRID = '[A-Z][A-Z][0-9][0-9][A-Z]*'
+RE_RSSI = '[+-][1-9][0-9]*'
+
+RE_BCN_MSG = re.compile(f'^{RE_BCN}\s({RE_CALL})\s({RE_GRID})$')
+RE_CQ_MSG = re.compile(f'^CQ\s({RE_CALL})\s({RE_GRID})$')
+RE_SEQ1_MSG = re.compile(f'^({RE_CALL})\s({RE_CALL})\s({RE_GRID})$')
+RE_SEQ2_MSG = re.compile(f'^({RE_CALL})\s({RE_CALL})\s({RE_RSSI})$')
+RE_SEQ3_MSG = re.compile(f'^({RE_CALL})\s({RE_CALL})\sR({RE_RSSI})$')
+RE_SEQ4_MSG = re.compile(f'^({RE_CALL})\s({RE_CALL})\sRRR$')
+RE_SEQ5_MSG = re.compile(f'^({RE_CALL})\s({RE_CALL})\s73$')
 
 
 class Buttons:
@@ -58,6 +73,8 @@ class MainFA:
 		self.state = MainFA.INVALID
 		self.seq_idx = 5
 		self.theircall = ""
+		self.grid = ""
+		self.rssi = ""
 
 	def set_mode(self, mode):
 		if mode == 'beacon':
@@ -164,7 +181,7 @@ class UI:
 			self._status[1] = self.TGI_BEACON
 			self._recv = True
 		elif self._fa.state == MainFA.SEQUENCE:
-			self._xmit_message = self._config["messages"]["sequence"][self._fa.seq_idx].format(**self._config, theircall=self._fa.theircall)
+			self._xmit_message = self._config["messages"]["sequence"][self._fa.seq_idx].format(**self._config, theircall=self._fa.theircall, grid=self._fa.grid, rssi=self._fa.rssi)
 			self._main[0].text = self._xmit_message
 			self._main[1].text = ""
 			self._main[2].text = ""
@@ -172,10 +189,10 @@ class UI:
 			self._recv = True
 		elif self._fa.state == MainFA.FREE:
 			free_msgs = self._config["messages"]["free"]
-			self._xmit_message = free_msgs[0].format(**self._config, theircall=self._fa.theircall) if len(free_msgs) >= 1 else ""
+			self._xmit_message = free_msgs[0].format(**self._config, theircall=self._fa.theircall, grid=self._fa.grid, rssi=self._fa.rssi) if len(free_msgs) >= 1 else ""
 			self._main[0].text = self._xmit_message
-			self._main[1].text = free_msgs[1].format(**self._config, theircall=self._fa.theircall) if len(free_msgs) >= 2 else ""
-			self._main[2].text = free_msgs[2].format(**self._config, theircall=self._fa.theircall) if len(free_msgs) >= 3 else ""
+			self._main[1].text = free_msgs[1].format(**self._config, theircall=self._fa.theircall, grid=self._fa.grid, rssi=self._fa.rssi) if len(free_msgs) >= 2 else ""
+			self._main[2].text = free_msgs[2].format(**self._config, theircall=self._fa.theircall, grid=self._fa.grid, rssi=self._fa.rssi) if len(free_msgs) >= 3 else ""
 			self._status[1] = self.TGI_FREE
 			self._recv = True
 		if self._xmit is not None:
@@ -197,7 +214,57 @@ class UI:
 			self._main[self._cur].background_color = 0xffffff if self._selecting is not None else None
 	
 	def process_message(self, m):
-		print(f"RECV: {m}")
+		self._main[1].text = ''
+		self._main[2].text = ''
+		try:
+			m = m.decode().upper()
+		except UnicodeError:
+			print("Invalid: "+m)
+		# start matching message types
+		p = RE_BCN_MSG.match(m)
+		if p is not None:
+			self._main[1].text = 'BCN found'
+			self._fa.theircall, self._fa.grid = p.groups()
+			self._main[2].text = self._fa.theircall + " -- " + self._fa.grid
+			return
+		p = RE_CQ_MSG.match(m)
+		if p is not None:
+			self._main[1].text = 'CQ'
+			self._fa.theircall, self._fa.grid = p.groups()
+			self._main[2].text = self._fa.theircall + " -- " + self._fa.grid
+			return
+		p = RE_SEQ1_MSG.match(m)
+		if p is not None:
+			self._main[1].text = 'SEQ1'
+			mycall, self._fa.theircall, self._fa.grid = p.groups()
+			self._main[2].text = f'{self._fa.theircall} -- {self._fa.grid}'
+			return
+		p = RE_SEQ2_MSG.match(m)
+		if p is not None:
+			self._main[1].text = 'SEQ2'
+			mycall, self._fa.theircall, self._fa.rssi = p.groups()
+			self._main[2].text = f'{self._fa.theircall} -- {self._fa.rssi}'
+			return
+		p = RE_SEQ3_MSG.match(m)
+		if p is not None:
+			self._main[1].text = 'SEQ3'
+			mycall, self._fa.theircall, self._fa.rssi = p.groups()
+			self._main[2].text = f'{self._fa.theircall} -- {self._fa.rssi}'
+			return
+		p = RE_SEQ4_MSG.match(m)
+		if p is not None:
+			self._main[1].text = 'RRR'
+			mycall, self._fa.theircall = p.groups()
+			self._main[2].text = self._fa.theircall
+			return
+		p = RE_SEQ5_MSG.match(m)
+		if p is not None:
+			self._main[1].text = '73'
+			mycall, self._fa.theircall = p.groups()
+			self._main[2].text = self._fa.theircall
+			return
+		# freeform message
+		print(m)
 
 	def select(self):
 		if not self._select.hidden:  # process menu selection
@@ -267,13 +334,13 @@ class UI:
 			# check to see if middle button is pressed, if so start a timer
 			if 1 in press:
 				self._selecting = time.time()
+			if self._selecting is not None and (time.time() - self._selecting) >= UI.MENU_TIME:
+				# activate the menu
+				self.menu()
 
 			# see if we've released the middle button, if so see if it was a long or short press
 			if 1 in release:
-				if self._selecting is not None and (time.time() - self._selecting) >= UI.MENU_TIME:
-					# activate the menu
-					self.menu()
-				else:
+				if self._selecting is None or (time.time() - self._selecting) < UI.MENU_TIME:
 					# a short press
 					self.select()
 				self._selecting = None  # reset the timer
