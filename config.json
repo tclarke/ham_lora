@@ -6,17 +6,5 @@
     "frequency": 917.0,
     "log": true,
     "beacon_time": 5,
-    "messages":
-    {
-        "beacon": "BCN {callsign} {grid}",
-        "sequence": [
-            "{theircall} {callsign} {grid}",
-            "{theircall} {callsign} {rssi}",
-            "{theircall} {callsign} R{rssi}",
-            "{theircall} {callsign} RRR",
-            "{theircall} {callsign} 73",
-            "CQ {callsign} {grid}"
-        ],
-        "free": []
-    }
+    "messages": [],
 }

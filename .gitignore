@@ -3,3 +3,6 @@
 .fseventsd
 .metadata_never_index
 boot_out.txt
+.venv
+__pycache__
+*.pyc

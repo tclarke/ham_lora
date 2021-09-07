@@ -14,7 +14,6 @@ class Radio:
         self._rst = digitalio.DigitalInOut(Radio.RST)
         self._rfm9x = RFM9x(self._spi, self._cs, self._rst, 915.)
         self._rfm9x.coding_rate = 8
-        self.messages = []
     
     @property
     def frequency(self):
@@ -38,12 +37,11 @@ class Radio:
     def power_on(self):
         self._rfm9x.reset()
     
-    def update(self):
+    def receive(self):
         buf = self._rfm9x.receive(timeout=0.005)
         if buf is not None and buf[0] != b'\x00':
-            self.messages.append(buf)
-            return True
-        return False
+            return buf
+        return None
     
     def transmit(self, msg):
         self._rfm9x.send(msg)
