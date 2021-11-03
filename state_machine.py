@@ -34,8 +34,8 @@ class Bcn(State):
 
 
 class BcnPrnt(State):
-    def __init__(self, data=None, gui=None, **kwrgs):
-        gui.set_text(2, data)
+    def __init__(self, data=None, ui=None, **kwrgs):
+        ui.set_text(2, data)
 
     def __call__(self, short_press=[], **kwargs):
         if 1 in short_press:
@@ -84,8 +84,8 @@ class Free(State):
 
 
 class FreePrnt(State):
-    def __init__(self, data=None, gui=None, **kwargs):
-        gui.set_text(2, data)
+    def __init__(self, data=None, ui=None, **kwargs):
+        ui.set_text(2, data)
 
     def __call__(self, short_press=[], **kwargs):
         if 1 in short_press:
@@ -131,7 +131,7 @@ class SeqParse(State):
     RE_SEQ4_MSG = re.compile(f'^({RE_CALL})\s({RE_CALL})\sRRR$')
     RE_SEQ5_MSG = re.compile(f'^({RE_CALL})\s({RE_CALL})\s73$')
 
-    def __init__(self, data=None, msgs=None, msg_idx=None, msg_params={}, **kwargs):
+    def __init__(self, data=None, msgs=None, msg_idx=None, msg_params={}, ui=None, **kwargs):
         try:
             data = data.decode().upper()
         except UnicodeError:
@@ -184,7 +184,7 @@ class SeqParse(State):
                     parsed = True
 	
         if parsed:
-            print(f'Parsed {data}')
+            ui.set_text(2, data)
             msg_idx[0] = (msg_idx[0] + 1) % len(msgs)
 
     def __call__(self, short_press=[], **kwargs):
@@ -223,12 +223,10 @@ class StateMachine:
         self.__state = InitialState()
         self.msg_idx=[0]
         self.radio = None
-        print(self)
     
     def __call__(self, **kwargs):
         kwargs.update(self.__dict__)
         self.__state = self.__state(**kwargs)
-        print(self)
     
     def __str__(self):
         return f'StateMachine({self.__state.__class__.__name__})'

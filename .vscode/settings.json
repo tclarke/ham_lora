@@ -9,7 +9,7 @@
         "/Users/tclarke/.vscode/extensions/joedevivo.vscode-circuitpython-0.1.15/stubs",
         "/Users/tclarke/Library/Application Support/Code/User/globalStorage/joedevivo.vscode-circuitpython/bundle/20210903/adafruit-circuitpython-bundle-py-20210903/lib"
     ],
-    "circuitpython.board.version": "7.0.0-rc.1",
+    "circuitpython.board.version": "7.0.0-alpha.6",
     "circuitpython.board.vid": "0x239A",
     "circuitpython.board.pid": "0x80F2"
 }
