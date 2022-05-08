@@ -80,7 +80,7 @@ class GUI:
 		displayio.release_displays()
 		self._i2c = board.I2C()
 		self._display_bus = displayio.I2CDisplay(self._i2c, device_address=0x3C)
-		self._display = adafruit_displayio_sh1107.SH1107(self._display_bus, width=UI.WIDTH, height=UI.HEIGHT, rotation=0)
+		self._display = adafruit_displayio_sh1107.SH1107(self._display_bus, width=GUI.WIDTH, height=GUI.HEIGHT, rotation=0)
 		self._top = displayio.Group()
 		self._display.show(self._top)
 
@@ -126,7 +126,7 @@ with open('/config.json', 'rt') as f:
 
 ui = GUI(config)
 buttons = Buttons()
-sm = state_machine.StateMachine()
+sm = state_machine.StateMachine(config)
 radio = Radio()
 if "power" in config:
 	radio.power = config["power"]
@@ -135,4 +135,6 @@ if "frequency" in config:
 mode = config["mode"]
 while True:
 	short_press, long_press = buttons()
+	if len(short_press) > 0 or len(long_press) > 0:
+		print(short_press, long_press)
 	sm(short_press=short_press, long_press=long_press, mode=mode, ui=ui, radio=radio)

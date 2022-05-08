@@ -6,7 +6,7 @@ class InvalidTransition(Exception):
 
 class State:
     def __init__(self, **kwargs):
-        pass
+        print("Enter state: " + self.__class__.__name__)
     
     def __call__(self, *args, **kwargs):
         raise InvalidTransition()
@@ -46,7 +46,7 @@ class BcnPrnt(State):
 class BcnSend(State):
     MSG = 'BCN {mycall} {mygrid}'
     def __init__(self, msg_props={}, radio=None, **kwargs):
-        m = BcnSend.MSG.format(msg_props)
+        m = BcnSend.MSG.format(**msg_props)
         radio.transmit(m)
 
     def __call__(self, **kwargs):
@@ -102,7 +102,9 @@ class FreeSend(State):
 
 
 class Seq(State):
-    def __call__(self, radio=None, short_press=[], msgs=None, msg_idx=None, **kwargs):
+    def __call__(self, radio=None, short_press=[], msgs=None, msg_params=None, msg_idx=None, ui=None, **kwargs):
+        m = [p.format(**msg_params) for p in msgs[msg_idx[0]:msg_idx[0]+3]]
+        ui.set_all_text(m)
         if 1 in short_press:
             return SeqSend(msgs=msgs, msg_idx=msg_idx, **kwargs)
         if 0 in short_press:
@@ -200,29 +202,35 @@ class SeqSend(State):
             radio.transmit(m)
             msg_idx[0] = (msg_idx[0] + 1) % len(msgs)
             if msg_idx[0] == 0:
-                del msg_params['theircall']
-                del msg_params['theirgrid']
-                del msg_params['theirrssi']
-                del msg_params['myrssi']
+                msg_params['theircall'] = '{theircall}'
+                msg_params['theirgrid'] = '{theirgrid}'
+                msg_params['theirrssi'] = '{rssi}'
+                msg_params['myrssi'] = '{rssi}'
 
     def __call__(self, **kwargs):
         return Seq(**kwargs)
 
 
 class StateMachine:
-    msgs=[
-        "CQ {mycall} {mygrid}",
-        "{theircall} {mycall} {mygrid}",
-        "{theircall} {mycall} {theirrssi}",
-        "{theircall} {mycall} R{theirrssi}",
-        "{theircall} {mycall} RRR",
-        "{theircall} {mycall} 73",
-    ]
-
-    def __init__(self):
+    def __init__(self, config):
         self.__state = InitialState()
         self.msg_idx=[0]
-        self.radio = None
+        self.msgs=[
+            "CQ {mycall} {mygrid}",
+            "{theircall} {mycall} {mygrid}",
+            "{theircall} {mycall} {theirrssi}",
+            "{theircall} {mycall} R{theirrssi}",
+            "{theircall} {mycall} RRR",
+            "{theircall} {mycall} 73",
+        ]
+        self.msg_params = {
+            'mycall': config['callsign'],
+            'mygrid': config['grid'],
+            'theircall': '{theircall}',
+            'theirgrid': '{theirgrid}',
+            'theirrssi': '{rssi}',
+            'myrssi': '{rssi}'
+            }
     
     def __call__(self, **kwargs):
         kwargs.update(self.__dict__)
