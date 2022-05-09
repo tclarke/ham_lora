@@ -1,10 +1,11 @@
 {
     "callsign": "K8TRC",
     "grid": "EM79vs",
-    "mode": "sequence",
+    "mode": "beacon",
     "power": 5,
     "frequency": 917.0,
     "log": true,
+    "ping_length": 3,
     "beacon_time": 5,
     "messages": [],
     "debug": false

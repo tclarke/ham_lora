@@ -32,22 +32,29 @@ class Bcn(State):
         ui.set_select(-1)
         radio.listen()
         
-    def __call__(self, ui=None, radio=None, short_press=[], **kwargs):
+    def __call__(self, ui=None, bkn_count=None, radio=None, short_press=[], **kwargs):
+        ui.draw_time()
         ui.set_tx(False)
+        if 0 in short_press:
+            bkn_count[0] = 0
+            ui.set_text(0, "")
+            ui.set_text(1, "")
         if 1 in short_press:
             return BcnSend(ui=ui, radio=radio, **kwargs)
         data = radio.receive(0.1)
         if data is not None:
-            return BcnPrnt(ui=ui, data=data, **kwargs)
+            return BcnPrnt(ui=ui, bkn_count=bkn_count, data=data, **kwargs)
         return self
 
 
 class BcnPrnt(State):
-    def __init__(self, data=None, ui=None, **kwargs):
+    def __init__(self, bkn_count=None, data=None, ui=None, **kwargs):
         super().__init__(**kwargs)
         if type(data) is bytearray:
             data = data.decode()
-        ui.set_text(2, data)
+        bkn_count[0] += 1
+        ui.set_text(0, str(bkn_count[0]))
+        ui.set_text(1, data)
         print(f'Received beacon: {data}')
 
     def __call__(self, short_press=[], **kwargs):
@@ -58,12 +65,14 @@ class BcnPrnt(State):
 
 class BcnSend(State):
     MSG = 'BCN {mycall} {mygrid}'
-    def __init__(self, msg_params={}, radio=None, ui=None, **kwargs):
+    def __init__(self, msg_params={}, radio=None, ui=None, config=None, **kwargs):
         super().__init__(**kwargs)
         m = BcnSend.MSG.format(**msg_params)
         ui.set_tx(True)
         print(f'BcnSend: {m}')
-        radio.transmit(m)
+        for i in range(config.get('ping_length', 1)):
+            radio.transmit(m)
+            time.sleep(0.25)
 
     def __call__(self, **kwargs):
         return BcnWait(**kwargs)
@@ -78,9 +87,9 @@ class BcnWait(Bcn):
         end_time = time.time()
         if 1 in short_press:
             return Bcn(**kwargs)
-        tmp = super().__call__(**kwargs)
+        tmp = super().__call__(config=config, **kwargs)
         if tmp is self and (end_time - self._start_time) >= config['beacon_time']:
-            return BcnSend(**kwargs)
+            return BcnSend(config=config, **kwargs)
         return tmp
 
 
@@ -143,6 +152,7 @@ class Seq(State):
         ui.set_select(0)
 
     def __call__(self, radio=None, ui=None, short_press=[], long_press=[], msgs=None, msg_params=None, msg_idx=None, **kwargs):
+        ui.draw_time()
         if 1 in short_press:
             return SeqSend(radio=radio, ui=ui, msgs=msgs, msg_params=msg_params, msg_idx=msg_idx, **kwargs)
         if 0 in short_press:
@@ -239,7 +249,6 @@ class SeqParse(State):
                     parsed = True
                     msg_idx[0] = 5
                     msg_idx[1] = 0
-                    data = ""
         elif msg_idx[1] == 5:
             p = SeqParse.RE_SEQ5_MSG.match(data)
             if p is not None:
@@ -257,7 +266,6 @@ class SeqParse(State):
         ui.set_rx_error(not parsed)
         if parsed:
             msg_params['theirrssi'] = radio.rssi
-            ui.set_text(2, data)
             Seq.show_msgs(ui, msgs, msg_params, msg_idx)
 
     def __call__(self, short_press=[], **kwargs):
@@ -267,18 +275,26 @@ class SeqParse(State):
 
 
 class SeqSend(State):
-    def __init__(self, radio=None, ui=None, msgs=None, msg_idx=None, msg_params={}, **kwargs):
+    def __init__(self, radio=None, ui=None, msgs=None, msg_idx=None, msg_params={}, config=None, **kwargs):
         super().__init__(**kwargs)
         if msgs is not None and msg_idx is not None:
             m = msgs[msg_idx[0]].format(**msg_params)
             ui.set_tx(True)
             print(f'SeqSend: {m}')
-            radio.transmit(m)
+            for i in range(config.get('ping_length', 1)):
+                radio.transmit(m)
+                time.sleep(0.25)
             if msg_idx[0] == 0 and msg_idx[1] == 0:
                 msg_idx[1] = 1
 
     def __call__(self, **kwargs):
         return Seq(**kwargs)
+
+
+class Configure(State):
+    def __init__(self, saved_state=None, **kwargs):
+        super().__init__(**kwargs)
+        self.__saved_state = saved_state
 
 
 class StateMachine:
@@ -301,10 +317,14 @@ class StateMachine:
             'theirrssi': '___',
             'myrssi': '___'
             }
+        self.bkn_count = [0]
         self.config = config
     
     def __call__(self, **kwargs):
         kwargs.update(self.__dict__)
+        long_press = kwargs.get('long_press', [])
+        if 1 in long_press:  # special case, always jump to the configuration
+            self.__state = Configure(saved_state=self.__state, **kwargs)
         self.__state = self.__state(**kwargs)
     
     def __str__(self):

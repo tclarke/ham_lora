@@ -109,6 +109,11 @@ class GUI:
 		self._main.append(label.Label(FONT, x=0, y=16, baseline=True, text=""))
 		self._main.append(label.Label(FONT, x=0, y=32, baseline=True, text=""))
 	
+	def draw_time(self):
+		t = time.localtime()
+		ts = f'{t.tm_hour:02d}:{t.tm_min:02d}:{t.tm_sec:02d} {t.tm_year:03d}-{t.tm_mon:02d}-{t.tm_mday:02d}'
+		self._main[2].text = ts
+	
 	def set_tx(self, val=True):
 		if val:
 			self._status[5] = self.TGI_TX
