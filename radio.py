@@ -38,6 +38,12 @@ class Radio:
     def power_on(self):
         self._rfm9x.reset()
     
+    def listen(self):
+        self._rfm9x.listen()
+    
+    def idle(self):
+        self._rfm9x.idle()
+
     def receive(self, timeout=0.005):
         buf = self._rfm9x.receive(timeout=timeout)
         if buf is not None and buf[0] != 0:

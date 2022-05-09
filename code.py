@@ -114,6 +114,13 @@ class GUI:
 		else:
 			self._status[6] = self.TGI_BLANK
 	
+	def set_select(self, idx):
+		for i, s in enumerate(self._select):
+			if i == idx:
+				s.fill = 0xffffff
+			else:
+				s.fill = None
+	
 	def set_text(self, idx, text, inverse=False):
 		self._main[idx].text = str(text)
 		self._main[idx].color = 0x000000 if inverse else 0xffffff
@@ -158,6 +165,6 @@ else:
 	mode = config["mode"]
 	while True:
 		short_press, long_press = buttons()
-		#if len(short_press) > 0 or len(long_press) > 0:
-		#	print(short_press, long_press)
+		if len(short_press) > 0 or len(long_press) > 0:
+			print(short_press, long_press)
 		sm(short_press=short_press, long_press=long_press, mode=mode, ui=ui, radio=radio)
