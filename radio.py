@@ -1,6 +1,7 @@
 import board
 import busio
 import digitalio
+import time
 from adafruit_rfm9x import RFM9x
 
 class Radio:
@@ -12,8 +13,8 @@ class Radio:
         self._spi = busio.SPI(board.SCK, board.MOSI, board.MISO)
         self._cs = digitalio.DigitalInOut(Radio.CS)
         self._rst = digitalio.DigitalInOut(Radio.RST)
-        self._rfm9x = RFM9x(self._spi, self._cs, self._rst, 915.)
-        self._rfm9x.coding_rate = 8
+        self._rfm9x = RFM9x(self._spi, self._cs, self._rst, frequency)
+        #self._rfm9x.coding_rate = 8
     
     @property
     def frequency(self):
@@ -37,9 +38,9 @@ class Radio:
     def power_on(self):
         self._rfm9x.reset()
     
-    def receive(self):
-        buf = self._rfm9x.receive(timeout=0.005)
-        if buf is not None and buf[0] != b'\x00':
+    def receive(self, timeout=0.005):
+        buf = self._rfm9x.receive(timeout=timeout)
+        if buf is not None and buf[0] != 0:
             return buf
         return None
     

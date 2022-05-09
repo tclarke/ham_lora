@@ -23,13 +23,18 @@
                     "icons.bmp",
                     "lib/**/*.mpy"
                 ],
-                "deployOnSave": false
+                "deployOnSave": true
             }
         ],
         "targets": [
             {
                 "type": "local",
-                "name": "Copy to rp2040",
+                "name": "D:",
+                "dir": "D:/"
+            },
+            {
+                "type": "local",
+                "name": "E:",
                 "dir": "E:/"
             }
         ]

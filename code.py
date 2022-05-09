@@ -37,27 +37,30 @@ class Buttons:
 		if self._a.rose:
 			if self._a_tm is not None:
 				short_press.append(0)
+				self._a_tm = None
 		if self._a_tm is not None and (time.time() - self._a_tm) > Buttons.LONG_PRESS_TIME:
 			long_press.append(0)
-			self._a_tm = 0
+			self._a_tm = None
 		self._b.update()
 		if self._b.fell:
 			self._b_tm = time.time()
 		if self._b.rose:
 			if self._b_tm is not None:
 				short_press.append(1)
+				self._b_tm = None
 		if self._b_tm is not None and (time.time() - self._b_tm) > Buttons.LONG_PRESS_TIME:
 			long_press.append(1)
-			self._b_tm = 0
+			self._b_tm = None
 		self._c.update()
 		if self._c.fell:
 			self._c_tm = time.time()
 		if self._c.rose:
 			if self._c_tm is not None:
 				short_press.append(2)
+				self._c_tm = None
 		if self._c_tm is not None and (time.time() - self._c_tm) > Buttons.LONG_PRESS_TIME:
 			long_press.append(2)
-			self._c_tm = 0
+			self._c_tm = None
 		return short_press, long_press
 
 class GUI:
@@ -85,7 +88,6 @@ class GUI:
 		self._display.show(self._top)
 
 		self._status = displayio.TileGrid(self._sprites, pixel_shader=self._palette, width=8, height=1, tile_width=16, tile_height=16, default_tile=self.TGI_BLANK)
-		self._status[6] = self.TGI_RX
 		self._top.append(self._status)
 
 		self._select = displayio.Group(x=0, y=24)
@@ -99,6 +101,18 @@ class GUI:
 		self._main.append(label.Label(FONT, x=0, y=0, baseline=True, text=""))
 		self._main.append(label.Label(FONT, x=0, y=16, baseline=True, text=""))
 		self._main.append(label.Label(FONT, x=0, y=32, baseline=True, text=""))
+	
+	def set_tx(self, val=True):
+		if val:
+			self._status[5] = self.TGI_TX
+		else:
+			self._status[5] = self.TGI_BLANK
+	
+	def set_rx(self, val=True):
+		if val:
+			self._status[6] = self.TGI_RX
+		else:
+			self._status[6] = self.TGI_BLANK
 	
 	def set_text(self, idx, text, inverse=False):
 		self._main[idx].text = str(text)
@@ -120,21 +134,30 @@ class GUI:
 # Main execution
 #######
 config = {}
+print("Loading config.json")
 with open('/config.json', 'rt') as f:
 	import json
 	config = json.load(f)
-
-ui = GUI(config)
-buttons = Buttons()
-sm = state_machine.StateMachine(config)
-radio = Radio()
-if "power" in config:
-	radio.power = config["power"]
-if "frequency" in config:
-	radio.frequency = config["frequency"]
-mode = config["mode"]
-while True:
-	short_press, long_press = buttons()
-	if len(short_press) > 0 or len(long_press) > 0:
-		print(short_press, long_press)
-	sm(short_press=short_press, long_press=long_press, mode=mode, ui=ui, radio=radio)
+print(config)
+if config['debug']:
+	print("Debug mode enabled")
+else:
+	print("Initializing GUI")
+	ui = GUI(config)
+	buttons = Buttons()
+	print("Initialize state machine")
+	sm = state_machine.StateMachine(config)
+	print("Initialize radio")
+	radio = Radio()
+	if "power" in config:
+		radio.power = config["power"]
+		print(f'TX power: {radio.power}')
+	if "frequency" in config:
+		radio.frequency = config["frequency"]
+		print(f'Frequency: {radio.frequency}')
+	mode = config["mode"]
+	while True:
+		short_press, long_press = buttons()
+		#if len(short_press) > 0 or len(long_press) > 0:
+		#	print(short_press, long_press)
+		sm(short_press=short_press, long_press=long_press, mode=mode, ui=ui, radio=radio)

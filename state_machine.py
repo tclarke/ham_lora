@@ -1,4 +1,5 @@
 import re
+import time
 
 class InvalidTransition(Exception):
     pass
@@ -25,17 +26,23 @@ class InitialState(State):
 
 class Bcn(State):
     def __call__(self, radio=None, short_press=[], **kwargs):
+        ui.set_rx(True)
+        ui.set_tx(False)
         if 1 in short_press:
-            return BcnSend(**kwargs)
-        data = radio.receive()
+            return BcnSend(radio=radio, **kwargs)
+        data = radio.receive(0.1)
         if data is not None:
             return BcnPrnt(data=data, **kwargs)
         return self
 
 
 class BcnPrnt(State):
-    def __init__(self, data=None, ui=None, **kwrgs):
+    def __init__(self, data=None, ui=None, **kwargs):
+        super().__init__(**kwargs)
+        if type(data) is bytearray:
+            data = data.decode()
         ui.set_text(2, data)
+        print(f'Received beacon: {data}')
 
     def __call__(self, short_press=[], **kwargs):
         if 1 in short_press:
@@ -45,24 +52,32 @@ class BcnPrnt(State):
 
 class BcnSend(State):
     MSG = 'BCN {mycall} {mygrid}'
-    def __init__(self, msg_props={}, radio=None, **kwargs):
-        m = BcnSend.MSG.format(**msg_props)
-        radio.transmit(m)
+    def __init__(self, msg_params={}, radio=None, ui=None, **kwargs):
+        super().__init__(**kwargs)
+        m = BcnSend.MSG.format(**msg_params)
+        ui.set_tx(True)
+        ui.set_rx(False)
+        print(f'BcnSend: {m}')
+        for x in range(4):
+            radio.transmit(m)
+            time.sleep(0.25)
 
     def __call__(self, **kwargs):
         return BcnWait(**kwargs)
 
 
 class BcnWait(Bcn):
-    def __init__(self, **kwargs):
-        self._elapsed_time = 0
+    def __init__(self, ui=None, **kwargs):
+        super().__init__(**kwargs)
+        ui.set_rx(True)
+        self._start_time = time.time()
 
-    def __call__(self, short_press=[], **kwargs):
-        self._elapsed_time += 1
+    def __call__(self, config=None, short_press=[], **kwargs):
+        end_time = time.time()
         if 1 in short_press:
             return Bcn(**kwargs)
         tmp = super().__call__(**kwargs)
-        if tmp is self and self._elapsed_time >= 10:
+        if tmp is self and (end_time - self._start_time) >= config['beacon_time']:
             return BcnSend(**kwargs)
         return tmp
 
@@ -85,6 +100,7 @@ class Free(State):
 
 class FreePrnt(State):
     def __init__(self, data=None, ui=None, **kwargs):
+        super().__init__(**kwargs)
         ui.set_text(2, data)
 
     def __call__(self, short_press=[], **kwargs):
@@ -95,6 +111,7 @@ class FreePrnt(State):
 
 class FreeSend(State):
     def __init__(self, msg=None, radio=None, **kwargs):
+        super().__init__(**kwargs)
         radio.transmit(msg)
 
     def __call__(self, **kwargs):
@@ -134,6 +151,7 @@ class SeqParse(State):
     RE_SEQ5_MSG = re.compile(f'^({RE_CALL})\s({RE_CALL})\s73$')
 
     def __init__(self, data=None, msgs=None, msg_idx=None, msg_params={}, ui=None, **kwargs):
+        super().__init__(**kwargs)
         try:
             data = data.decode().upper()
         except UnicodeError:
@@ -197,6 +215,7 @@ class SeqParse(State):
 
 class SeqSend(State):
     def __init__(self, radio=None, msgs=None, msg_idx=None, msg_params={}, **kwargs):
+        super().__init__(**kwargs)
         if msgs is not None and msg_idx is not None:
             m = msgs[msg_idx[0]].format(**msg_params)
             radio.transmit(m)
@@ -231,6 +250,7 @@ class StateMachine:
             'theirrssi': '{rssi}',
             'myrssi': '{rssi}'
             }
+        self.config = config
     
     def __call__(self, **kwargs):
         kwargs.update(self.__dict__)
