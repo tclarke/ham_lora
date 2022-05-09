@@ -74,6 +74,13 @@ class GUI:
 	TGI_BEACON = 4
 	TGI_SEQ = 5
 	TGI_FREE = 6
+	TGI_ERROR = 7
+
+	# Status bar fields:
+	#  4: RX error
+	#  5: TX
+	#  6: RX
+	#  7: Mode
 
 	def __init__(self, config) -> None:
 		self._config = config
@@ -114,6 +121,27 @@ class GUI:
 		else:
 			self._status[6] = self.TGI_BLANK
 	
+	def set_rx_error(self, val=True):
+		if val:
+			self._status[5] = self.TGI_ERROR
+		else:
+			self._status[5] = self.TGI_BLANK
+	
+	def set_mode_menu(self):
+		self._status[7] = self.TGI_MENU
+	
+	def set_mode_beacon(self):
+		self._status[7] = self.TGI_BEACON
+	
+	def set_mode_sequence(self):
+		self._status[7] = self.TGI_SEQ
+	
+	def set_mode_free(self):
+		self._status[7] = self.TGI_FREE
+	
+	def set_mode_none(self):
+		self._status[7] = self.TGI_BLANK
+
 	def set_select(self, idx):
 		for i, s in enumerate(self._select):
 			if i == idx:

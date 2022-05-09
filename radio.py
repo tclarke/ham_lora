@@ -38,6 +38,10 @@ class Radio:
     def power_on(self):
         self._rfm9x.reset()
     
+    @property
+    def rssi(self):
+        return self._rfm9x.last_rssi
+    
     def listen(self):
         self._rfm9x.listen()
     
