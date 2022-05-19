@@ -51,7 +51,7 @@ class BcnPrnt(State):
     def __init__(self, bkn_count=None, data=None, ui=None, **kwargs):
         super().__init__(**kwargs)
         if type(data) is bytearray:
-            data = data.decode()
+            data = data.decode('utf-8', 'replace')
         bkn_count[0] += 1
         ui.set_text(0, str(bkn_count[0]))
         ui.set_text(1, data)
@@ -295,6 +295,9 @@ class Configure(State):
     def __init__(self, saved_state=None, **kwargs):
         super().__init__(**kwargs)
         self.__saved_state = saved_state
+    
+    def __call__(self, short_press=None, **kwargs):
+        pass
 
 
 class StateMachine:
